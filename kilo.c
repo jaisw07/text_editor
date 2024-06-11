@@ -37,9 +37,14 @@ void enableRawMode() {
 	raw.c_lflag &= ~(ECHO | ICANON | ISIG | IEXTEN);
 //the IXON flag is an input flag used to turn off commands like Ctrl+S and Ctrl+Q used for software flow control. Ctrl+S stops data from being transmitted to terminal until Ctrl+Q is pressed.
 //the ICRNL flag is an input flag where I stands for Input, CR for Carriage Return and NL for New Line. It fixes Ctrl+M and Enter being read as 10 instead of 13(the terminal translates carriage returns into newlines(10, '\n')
-	raw.c_iflag &= ~(IXON | ICRNL);
+//when BRKINT is turned on, a break condition will cause a termination signal to be sent to terminal
+//INPCK enables parity checking(doesn't apply to modern emulators)
+//ISTRIP sets the 8th bit of every byte to 0
+	raw.c_iflag &= ~(IXON | ICRNL | BRKINT | INPCK | ISTRIP);
 //the OPOST flag is an output processing flag, disabling it turns off the translation of every printed new line('\n') into a carriage return followed by a newline('\r\n'). The carriage return('\r') brings the cursor to the start of the current line and the newline('\n') moves the cursor down one line.
 	raw.c_oflag &= ~(OPOST);
+//CS8 is not a flag but a bit mask with multiple bits which is set using OR operator unlike the other flags which use AND operator. It sets CS(Character Size) to 8 bits per byte.
+	raw.c_cflag |= ~(CS8);
 //tcsetattr applies the changes to the terminal
 //TCSAFLUSH argument specifies when the changes should be applies; here it waits for all pending output to be written to the terminal and also discards any input that has not been read
 //TCSAFLUSH is the reason why any unread input(after q for example) is not fed as input to the terminal
