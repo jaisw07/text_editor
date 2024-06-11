@@ -19,7 +19,6 @@ void enableRawMode() {
 	raw.c_lflag &= ~(ECHO);
 //tcsetattr applies the changes to the terminal
 //TCSAFLUSH argument specifies when the changes should be applies; here it waits for all pending output to be written to the terminal and also discards any input that has not been read
-//TCSAFLUSH is the reason why any unread input(after q for example) is not fed as input to the terminal
 	tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 }
 
