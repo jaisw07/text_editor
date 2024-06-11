@@ -1,15 +1,27 @@
+//header file 'stdlib' provides atexit() functionality
+#include <stdlib.h>
 //header file 'termios' provides struct termios, tcgetattr(), tcsetattr(), ECHO and TCSAFLUSH functionality
 #include <termios.h>
 //header file 'unistd' provides read() and STDIN_FILENO functionality
 #include <unistd.h>
 
+//global variable orig_termios is used to store the current terminal attr to restore them once program ends
+struct termios orig_termios;
+void disableRawMode() {
+//using TCSAFLUSH here is the reason why any unread input(after q for example) is not fed as input to the terminal because it discards any unread input before applying changes to terminal
+	tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
+}
+
 //to prevent input only being sent on pressing Enter, we need to switch from cooked/canonical mode to raw mode
 //enableRawMode stops echoing(printing/displaying what we type in the terminal)
 //flags(aka options) are settings to enable/disable a specific feature of the terminal/CLI
 void enableRawMode() {
-	struct termios raw;
-//tcgetattr reads terminal attributes into our pre-defined termios struct(named 'raw') to store current terminal attributes
-	tcgetattr(STDIN_FILENO, &raw);
+//tcgetattr reads terminal attributes into our pre-defined termios struct(named 'orig_termios) to store current terminal attributes
+	tcgetattr(STDIN_FILENO, &orig_termios);
+//executes disableRawMode() when program ends; atexit is executed when program exits via main or via the exit() function
+	atexit(disableRawMode);
+//copies current terminal attributes to another termios struct(named 'raw') to make our changes on the copy without disturbing the original attributes so we can safely restore them once program exits
+	struct termios raw = orig_termios;
 //this line modifies the terminal attribute by accessing via raw(our termios struct)
 //c_lflag field means 'local flags' : local flags control higher level properties input processing like echoing, choice of canonical/non-canonical input, etc. as compared to the input flags
 //other flags like c_iflag(input flags), c_oflag(output flags) and c_cflag(control flags) will be modified too
@@ -26,8 +38,8 @@ int main() {
 	enableRawMode();
 	char c;
 //read() returns the number of bytes read; it will return 0 when it reaches end of file
-//STDIN_FILENO points to the standard input file
-//this while loop keeps reading 1 byte from std input to var c until there are no more bytes to read
+//STDIN_FILENO points to the standard input file(input fromn terminal)
+//this while loop keeps reading 1 byte from std input to var c until there are no more bytes to read or if a 'q' is typed
 	while (read(STDIN_FILENO, &c, 1) == 1 && c != 'q');
 	return 0;
 }
