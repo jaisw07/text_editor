@@ -32,7 +32,12 @@ void enableRawMode() {
 //ECHO's 32 bit bitflag(...1000) is complemented(...0111) by using ~(binary NOT operator). then (&=)AND with the local flags, which forces the 4th bit in the flags to become 0 and the rest to remain as is
 //This is an example of flipping bits in C
 //the ICANON flag is a local flag used to turn off canonical mode; we can finally read input byte-by-byte rather than line-by-line
-	raw.c_lflag &= ~(ECHO | ICANON);
+//the ISIG flag is a local flag used to turn off commands like Ctrl+C and Ctrl+Z which terminate and suspend running program respectively(also turns off Ctrl+Y command for MacOS which is similar to Ctrl+Z but waits for program to read input before suspending it)
+//the IXTEN flag is a local flag used to turn off Ctrl+V command that sends the next input character back as a literal(also turns off Ctrl+O command which is discarded in MacOS otherwise)
+	raw.c_lflag &= ~(ECHO | ICANON | ISIG | IEXTEN);
+//the IXON flag is an input flag used to turn off commands like Ctrl+S and Ctrl+Q used for software flow control. Ctrl+S stops data from being transmitted to terminal until Ctrl+Q is pressed.
+//the ICRNL flag is an input flag where I stands for Input and CR for Carriage Return. It fixes Ctrl+M and Enter being read as 10 instead of 13(the terminal translates carriage returns into newlines(10, '\n')
+	raw.c_iflag &= ~(IXON | ICRNL);
 //tcsetattr applies the changes to the terminal
 //TCSAFLUSH argument specifies when the changes should be applies; here it waits for all pending output to be written to the terminal and also discards any input that has not been read
 //TCSAFLUSH is the reason why any unread input(after q for example) is not fed as input to the terminal
