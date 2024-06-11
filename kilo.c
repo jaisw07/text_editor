@@ -1,3 +1,7 @@
+//header file 'ctype' provides iscntrl() functionality
+#include <ctype.h>
+//header file 'stdio' provides printf() functionality
+#include <stdio.h>
 //header file 'stdlib' provides atexit() functionality
 #include <stdlib.h>
 //header file 'termios' provides struct termios, tcgetattr(), tcsetattr(), ECHO and TCSAFLUSH functionality
@@ -41,6 +45,13 @@ int main() {
 //read() returns the number of bytes read; it will return 0 when it reaches end of file
 //STDIN_FILENO points to the standard input file(input fromn terminal)
 //this while loop keeps reading 1 byte from std input to var c until there are no more bytes to read or if a 'q' is typed
-	while (read(STDIN_FILENO, &c, 1) == 1 && c != 'q');
+	while (read(STDIN_FILENO, &c, 1) == 1 && c != 'q') {
+//iscntrl() tests whether character is a control char that is, it is a nonprintable character which we don't want to print on screen(ASCII 0-31 and 127)
+		if(iscntrl(c)) {
+			printf("%d\n", c);
+		} else {
+			printf("%d ('%c')\n", c, c);
+		}
+	}
 	return 0;
 }
