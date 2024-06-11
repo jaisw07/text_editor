@@ -8,7 +8,6 @@
 //global variable orig_termios is used to store the current terminal attr to restore them once program ends
 struct termios orig_termios;
 void disableRawMode() {
-//using TCSAFLUSH here is the reason why any unread input(after q for example) is not fed as input to the terminal because it discards any unread input before applying changes to terminal
 	tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
 }
 
@@ -28,9 +27,11 @@ void enableRawMode() {
 //ECHO is a bitflag; bitflags are a way to represent multiple boolean values as a single integer where the number of boolean states stored per integer depends upon it's memory size; for eg, a 32 bit int can store 32 boolean states
 //ECHO's 32 bit bitflag(...1000) is complemented(...0111) by using ~(binary NOT operator). then (&=)AND with the local flags, which forces the 4th bit in the flags to become 0 and the rest to remain as is
 //This is an example of flipping bits in C
-	raw.c_lflag &= ~(ECHO);
+//the ICANON flag is a local flag used to turn off canonical mode; we can finally read input byte-by-byte rather than line-by-line
+	raw.c_lflag &= ~(ECHO | ICANON);
 //tcsetattr applies the changes to the terminal
 //TCSAFLUSH argument specifies when the changes should be applies; here it waits for all pending output to be written to the terminal and also discards any input that has not been read
+//TCSAFLUSH is the reason why any unread input(after q for example) is not fed as input to the terminal
 	tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 }
 
