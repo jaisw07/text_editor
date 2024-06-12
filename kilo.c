@@ -1,18 +1,33 @@
+/***includes***/
+//header file 'errno' provides the 'errno' global var and EAGAIN functionality
+#include <errno.h>
 //header file 'ctype' provides iscntrl() functionality
 #include <ctype.h>
-//header file 'stdio' provides printf() functionality
+//header file 'stdio' provides printf() and perror() functionality
 #include <stdio.h>
-//header file 'stdlib' provides atexit() functionality
+//header file 'stdlib' provides exit() and atexit() functionality
 #include <stdlib.h>
 //header file 'termios' provides struct termios, tcgetattr(), tcsetattr(), ECHO, TCSAFLUSH and VMIN, VTIME functionality
 #include <termios.h>
 //header file 'unistd' provides read() and STDIN_FILENO functionality
 #include <unistd.h>
 
+/***data***/
 //global variable orig_termios is used to store the current terminal attr to restore them once program ends
 struct termios orig_termios;
+
+/***terminal***/
+//prints error msg and exits program
+void die(const char *s) {
+//perror looks at the global errno var and prints a descriptive error msg for the same. Most C library func set errno var to indicate the error(if any).
+	perror(s);
+//after printing error msg, we exit w an exit code of 1 to indicate failure(non-zero val)
+	exit(1);
+}
+
 void disableRawMode() {
-	tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
+	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios) == -1)
+	die("tcsetattr");
 }
 
 //to prevent input only being sent on pressing Enter, we need to switch from cooked/canonical mode to raw mode
@@ -20,7 +35,8 @@ void disableRawMode() {
 //flags(aka options) are settings to enable/disable a specific feature of the terminal/CLI
 void enableRawMode() {
 //tcgetattr reads terminal attributes into our pre-defined termios struct(named 'orig_termios) to store current terminal attributes
-	tcgetattr(STDIN_FILENO, &orig_termios);
+	if (tcgetattr(STDIN_FILENO, &orig_termios) == -1)
+	die("tcgetattr");
 //executes disableRawMode() when program ends; atexit is executed when program exits via main or via the exit() function
 	atexit(disableRawMode);
 //copies current terminal attributes to another termios struct(named 'raw') to make our changes on the copy without disturbing the original attributes so we can safely restore them once program exits
@@ -53,16 +69,20 @@ void enableRawMode() {
 //tcsetattr applies the changes to the terminal
 //TCSAFLUSH argument specifies when the changes should be applies; here it waits for all pending output to be written to the terminal and also discards any input that has not been read
 //TCSAFLUSH is the reason why any unread input(after q for example) is not fed as input to the terminal
-	tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1)
+	die("tcsetattr");
 }
 
+/***init***/
 int main() {
 	enableRawMode();
 	while (1) {
 		char c = '\0';
 //read() returns the number of bytes read; it reads from STDIN_FILENO(terminal input) to char c and returns after nbytes=1 byte has been read i.e. returns after every single char input
 //STDIN_FILENO points to the standard input file(input from terminal)
-		read(STDIN_FILENO, &c, 1);
+//in Cygwin, when read() times out it returns -1 w an errno of EAGAIN instead of returning 0. To account for this, we have specified that EAGAIN is not an error.
+		if (read(STDIN_FILENO, &c, 1) == -1 && errno != EAGAIN)
+		die("read");
 //iscntrl() tests whether character is a control char that is, it is a nonprintable character which we don't want to print on screen(ASCII 0-31 and 127)
 		if(iscntrl(c)) {
 			printf("%d\r\n", c);
