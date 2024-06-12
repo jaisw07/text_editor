@@ -1,0 +1,40 @@
+1. read() : function from the unistd header
+	Returns the number of bytes it has read(int)
+	Has a parameter nbytes which is the max bytes it reads before returning
+	Returns int <= nbytes normally(can be less than nbytes if the input stream is less than nbytes)
+	Reads 'return value' number of bytes and advances the file by that many bytes
+	Returns -1 if error
+	Returns 0 if no bytes read(no input or end of file)
+
+2. Blocking
+	Blocking is a process for memory optimization in which a program which is waiting for some event(for input or for a resource to become available) is put in a 'blocked state' so that other programs may utilize those shared resources during this time of inactivity.
+	Once the event occurs or the shared resource usage has been finished, the program advances from blocked state to a runnable state.
+	Blocking prevents the concurrent usage of shared resources which could lead to degradation in performance due to resource starvation.
+	Example: ﻿
+	An ordinary loop
+		for (i=0; i<N; ++i) {}
+	can be blocked with a block size B by replacing it with
+		for (j=0; j<N; j+=B) {
+			for (i=j; i<min (N, j+B); ++i) {}
+		}
+
+3. Timeout for read()
+Till v2.3, read() would wait indefinitely for input from keyboard before returning, consuming resources which could be used by other programs. To prevent this, a timeout for read was added using VMIN and VTIME functionality from the termios header file.
+A helpful resource to understand VMIN and VTIME : http://www.unixwiz.net/techtips/termios-vmin-vtime.html
+
+General reasons for usage:
+i) Timing is important to differentiate between key combination input and single key inputs. For example, a Ctrl+S input should be read differently than a Ctrl and an S input. This is dependent on timing. If S immediately follows Ctrl, it is a Ctrl+S combination input; else they are read as individual keypresses(achieved via VTIME).
+ii) It is inefficient to read single char at a time for high speed inputs. Reading in larger chunks would be better(achieved via VMIN)
+iii) For bursts of data of irregular size, VTIME is crucial to prevent segmentation and overlap of messages
+
+Now our nbytes = 1 which means that read returns when it's read 1 byte(or 8 bits) which basically means read returns after every character input.
+We have set VMIN = 0 and VTIME = 1.
+
+	3a. VTIME = 1
+		VTIME is reset after every char input, so if frequency of input is high enough(atleast 1 input every t*100 ms such that t < VTIME), VTIME never equals 1 and therefore read doesn't return.
+		However when a burst of input is given and there is delay afterwards before next input, VTIME counts to 100 ms and returns read().
+
+	3b. VMIN = 0
+		VMIN is the min no. of chars to be read before read() is returned. By setting it to 0, we ensure read() returns as soon as any input is read.
+**Query sent to Paige: When we block for input by setting VMIN = 0 and VTIME = 1, does VMIN really serve a purpose here? We are reading at nbytes = 1, which means read() will be returning after every single char input(since memory per char = 1byte).  Doesn't setting a VMIN value only make sense if our nbytes are above the minimum possible input limit?
+

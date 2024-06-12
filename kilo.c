@@ -4,7 +4,7 @@
 #include <stdio.h>
 //header file 'stdlib' provides atexit() functionality
 #include <stdlib.h>
-//header file 'termios' provides struct termios, tcgetattr(), tcsetattr(), ECHO and TCSAFLUSH functionality
+//header file 'termios' provides struct termios, tcgetattr(), tcsetattr(), ECHO, TCSAFLUSH and VMIN, VTIME functionality
 #include <termios.h>
 //header file 'unistd' provides read() and STDIN_FILENO functionality
 #include <unistd.h>
@@ -45,6 +45,11 @@ void enableRawMode() {
 	raw.c_oflag &= ~(OPOST);
 //CS8 is not a flag but a bit mask with multiple bits which is set using OR operator unlike the other flags which use AND operator. It sets CS(Character Size) to 8 bits per byte.
 	raw.c_cflag |= ~(CS8);
+//VMIN and VTIME are indexes into the c_cc(Control Characters) field, an array of bytes which control terminal settings
+//VMIN sets min number of bytes of input needed before read() can return; 0 bytes mean that that read() returns as soon as any input is read
+//VTIME sets max time to wait before read() returns in tenth of seconds; 1 means that read() will be returned after no input has been given for 100ms
+	raw.c_cc[VMIN] = 0;
+	raw.c_cc[VTIME] = 1;
 //tcsetattr applies the changes to the terminal
 //TCSAFLUSH argument specifies when the changes should be applies; here it waits for all pending output to be written to the terminal and also discards any input that has not been read
 //TCSAFLUSH is the reason why any unread input(after q for example) is not fed as input to the terminal
@@ -53,17 +58,18 @@ void enableRawMode() {
 
 int main() {
 	enableRawMode();
-	char c;
-//read() returns the number of bytes read; it will return 0 when it reaches end of file
-//STDIN_FILENO points to the standard input file(input fromn terminal)
-//this while loop keeps reading 1 byte from std input to var c until there are no more bytes to read or if a 'q' is typed
-	while (read(STDIN_FILENO, &c, 1) == 1 && c != 'q') {
+	while (1) {
+		char c = '\0';
+//read() returns the number of bytes read; it reads from STDIN_FILENO(terminal input) to char c and returns after nbytes=1 byte has been read i.e. returns after every single char input
+//STDIN_FILENO points to the standard input file(input from terminal)
+		read(STDIN_FILENO, &c, 1);
 //iscntrl() tests whether character is a control char that is, it is a nonprintable character which we don't want to print on screen(ASCII 0-31 and 127)
 		if(iscntrl(c)) {
 			printf("%d\r\n", c);
 		} else {
 			printf("%d ('%c')\r\n", c, c);
 		}
+		if (c == 'q') {break;}
 	}
 	return 0;
 }
